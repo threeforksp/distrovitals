@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DistroVitals - Linux Distribution Health Tracker</title>
+    <meta name="description" content="Track the health and vitality of Linux distributions through development activity, community engagement, and maintenance metrics.">
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>DistroVitals</h1>
+            <p class="tagline">Linux Distribution Health Tracker</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section id="rankings" class="card">
+            <h2>Health Rankings</h2>
+            <div id="rankings-table" class="loading">
+                <p>Loading rankings...</p>
+            </div>
+        </section>
+
+        <section id="distro-detail" class="card hidden">
+            <button id="back-btn" class="btn-secondary">&larr; Back to Rankings</button>
+            <div id="distro-info"></div>
+        </section>
+
+        <section id="about" class="card">
+            <h2>About DistroVitals</h2>
+            <p>DistroVitals tracks the health and vitality of Linux distributions by analyzing:</p>
+            <ul>
+                <li><strong>Development Activity</strong> - Commits, contributors, and code velocity</li>
+                <li><strong>Community Engagement</strong> - Stars, forks, and community growth</li>
+                <li><strong>Maintenance Health</strong> - Issue resolution, PR handling, and release cadence</li>
+            </ul>
+            <p>Data is collected from GitHub repositories and other public sources. Scores range from 0-100.</p>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>DistroVitals - Open Source Linux Distribution Health Metrics</p>
+        </div>
+    </footer>
+
+    <script src="/app.js"></script>
+</body>
+</html>

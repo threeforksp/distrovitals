@@ -1,0 +1,19 @@
+[package]
+name = "distrovitals-api"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+distrovitals-database.workspace = true
+distrovitals-collector.workspace = true
+distrovitals-analyzer.workspace = true
+axum.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

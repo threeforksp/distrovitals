@@ -1,0 +1,14 @@
+[package]
+name = "distrovitals-collector"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+distrovitals-database.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true

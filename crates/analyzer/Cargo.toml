@@ -1,0 +1,11 @@
+[package]
+name = "distrovitals-analyzer"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+distrovitals-database.workspace = true
+serde.workspace = true
+chrono.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
