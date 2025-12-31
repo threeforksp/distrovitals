@@ -378,8 +378,10 @@ function renderDataSources(distro, detailed = false) {
 
     if (distro.github_org) {
         const url = `https://github.com/${distro.github_org}`;
-        const label = detailed ? distro.github_org : 'GitHub';
-        badges.push(`<a href="${url}" target="_blank" class="source-badge github" onclick="event.stopPropagation()" title="GitHub: ${distro.github_org}">${GITHUB_ICON}<span>${label}</span></a>`);
+        const stars = m.total_stars || 0;
+        const starsFormatted = formatNumber(stars);
+        const label = detailed ? `${distro.github_org} (${starsFormatted} ★)` : `${starsFormatted} ★`;
+        badges.push(`<a href="${url}" target="_blank" class="source-badge github" onclick="event.stopPropagation()" title="GitHub: ${distro.github_org} - ${stars.toLocaleString()} stars">${GITHUB_ICON}<span>${label}</span></a>`);
     }
 
     if (distro.subreddit) {
