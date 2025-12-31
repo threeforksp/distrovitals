@@ -162,10 +162,10 @@ impl GithubCollector {
 
         let repo_info = self.get_repo(owner, repo).await?;
         let open_prs = self.count_open_prs(owner, repo).await.unwrap_or(0);
-        let (commits_30d, contributors_30d) = self
+        let (commits_30d, commits_365d, contributors_30d) = self
             .get_recent_activity(owner, repo)
             .await
-            .unwrap_or((0, 0));
+            .unwrap_or((0, 0, 0));
 
         let snapshot = NewGithubSnapshot {
             distro_id,
@@ -175,6 +175,7 @@ impl GithubCollector {
             open_issues: repo_info.open_issues_count,
             open_prs,
             commits_30d,
+            commits_365d,
             contributors_30d,
             last_commit_at: repo_info.pushed_at,
         };
@@ -241,41 +242,74 @@ impl GithubCollector {
         Ok(result.total_count)
     }
 
-    async fn get_recent_activity(&self, owner: &str, repo: &str) -> Result<(i64, i64)> {
-        let since = (Utc::now() - chrono::TimeDelta::days(30))
-            .format("%Y-%m-%dT%H:%M:%SZ")
-            .to_string();
-
-        let url = format!(
-            "https://api.github.com/repos/{}/{}/commits?since={}&per_page=100",
-            owner, repo, since
+    async fn get_recent_activity(&self, owner: &str, repo: &str) -> Result<(i64, i64, i64)> {
+        // Try stats API first, fall back to commits API if it's not ready
+        let stats_url = format!(
+            "https://api.github.com/repos/{}/{}/stats/commit_activity",
+            owner, repo
         );
 
-        let response = self.client.get(&url).send().await?;
-        self.check_rate_limit(&response)?;
+        #[derive(Deserialize)]
+        struct WeeklyCommits {
+            total: i64,
+            #[allow(dead_code)]
+            week: i64,
+        }
 
-        let commits: Vec<CommitResponse> = response.json().await?;
-        let commits_count = commits.len() as i64;
+        let mut commits_30d_count: i64 = 0;
+        let mut commits_365d_count: i64 = 0;
 
-        // Get unique contributors (simplified - would need pagination for accuracy)
+        // Try stats API (returns 202 if computing - need to use fallback)
+        let stats_response = self.client.get(&stats_url).send().await?;
+        if stats_response.status() == reqwest::StatusCode::OK {
+            let weekly_stats: Vec<WeeklyCommits> = stats_response.json().await.unwrap_or_default();
+            if !weekly_stats.is_empty() {
+                commits_365d_count = weekly_stats.iter().map(|w| w.total).sum();
+                commits_30d_count = weekly_stats.iter().rev().take(4).map(|w| w.total).sum();
+            }
+        }
+
+        // If stats API didn't return data, fall back to commits API
+        if commits_365d_count == 0 {
+            // Get 30-day commits
+            let since_30d = (Utc::now() - chrono::TimeDelta::days(30))
+                .format("%Y-%m-%dT%H:%M:%SZ")
+                .to_string();
+            let url_30d = format!(
+                "https://api.github.com/repos/{}/{}/commits?since={}&per_page=100",
+                owner, repo, since_30d
+            );
+            let response_30d = self.client.get(&url_30d).send().await?;
+            if response_30d.status().is_success() {
+                let commits: Vec<CommitResponse> = response_30d.json().await.unwrap_or_default();
+                commits_30d_count = commits.len() as i64;
+            }
+
+            // Get 365-day commits (limited to 100, but better than 0)
+            let since_365d = (Utc::now() - chrono::TimeDelta::days(365))
+                .format("%Y-%m-%dT%H:%M:%SZ")
+                .to_string();
+            let url_365d = format!(
+                "https://api.github.com/repos/{}/{}/commits?since={}&per_page=100",
+                owner, repo, since_365d
+            );
+            let response_365d = self.client.get(&url_365d).send().await?;
+            if response_365d.status().is_success() {
+                let commits: Vec<CommitResponse> = response_365d.json().await.unwrap_or_default();
+                commits_365d_count = commits.len() as i64;
+            }
+        }
+
+        // Get unique contributors
         let contributors_url = format!(
             "https://api.github.com/repos/{}/{}/stats/contributors",
             owner, repo
         );
-
         let contrib_response = self.client.get(&contributors_url).send().await?;
-
-        #[derive(Deserialize)]
-        struct ContributorStats {
-            #[allow(dead_code)]
-            total: i64,
-        }
-
-        let contributors: Vec<ContributorStats> =
-            contrib_response.json().await.unwrap_or_default();
+        let contributors: Vec<serde_json::Value> = contrib_response.json().await.unwrap_or_default();
         let contributors_count = contributors.len() as i64;
 
-        Ok((commits_count, contributors_count))
+        Ok((commits_30d_count, commits_365d_count, contributors_count))
     }
 
     fn check_rate_limit(&self, response: &reqwest::Response) -> Result<()> {

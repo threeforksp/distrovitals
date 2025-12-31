@@ -128,6 +128,23 @@ impl Database {
             info!("Added subreddit column and populated data");
         }
 
+        // Add commits_365d column if it doesn't exist
+        let has_commits_365d: bool = sqlx::query_scalar(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('github_snapshots') WHERE name = 'commits_365d'"
+        )
+        .fetch_one(&self.pool)
+        .await
+        .unwrap_or(false);
+
+        if !has_commits_365d {
+            sqlx::query("ALTER TABLE github_snapshots ADD COLUMN commits_365d INTEGER NOT NULL DEFAULT 0")
+                .execute(&self.pool)
+                .await
+                .map_err(|e| DatabaseError::Migration(format!("Failed to add commits_365d column: {}", e)))?;
+
+            info!("Added commits_365d column to github_snapshots");
+        }
+
         Ok(())
     }
 }
@@ -155,6 +172,7 @@ CREATE TABLE IF NOT EXISTS github_snapshots (
     open_issues INTEGER NOT NULL DEFAULT 0,
     open_prs INTEGER NOT NULL DEFAULT 0,
     commits_30d INTEGER NOT NULL DEFAULT 0,
+    commits_365d INTEGER NOT NULL DEFAULT 0,
     contributors_30d INTEGER NOT NULL DEFAULT 0,
     last_commit_at TEXT,
     collected_at TEXT NOT NULL DEFAULT (datetime('now'))

@@ -378,10 +378,15 @@ function renderDataSources(distro, detailed = false) {
 
     if (distro.github_org) {
         const url = `https://github.com/${distro.github_org}`;
-        const stars = m.total_stars || 0;
-        const starsFormatted = formatNumber(stars);
-        const label = detailed ? `${distro.github_org} (${starsFormatted} ★)` : `${starsFormatted} ★`;
-        badges.push(`<a href="${url}" target="_blank" class="source-badge github" onclick="event.stopPropagation()" title="GitHub: ${distro.github_org} - ${stars.toLocaleString()} stars">${GITHUB_ICON}<span>${label}</span></a>`);
+        const commits30d = m.commits_30d || 0;
+        const commits365d = m.commits_365d || 0;
+        const c30 = formatNumber(commits30d);
+        const c365 = formatNumber(commits365d);
+        const label = detailed
+            ? `${distro.github_org} (${c30}/30d, ${c365}/yr)`
+            : `${c30}/30d · ${c365}/yr`;
+        const title = `GitHub: ${distro.github_org} - ${commits30d.toLocaleString()} commits (30 days), ${commits365d.toLocaleString()} commits (year)`;
+        badges.push(`<a href="${url}" target="_blank" class="source-badge github" onclick="event.stopPropagation()" title="${title}">${GITHUB_ICON}<span>${label}</span></a>`);
     }
 
     if (distro.subreddit) {

@@ -28,6 +28,7 @@ pub struct GithubSnapshot {
     pub open_issues: i64,
     pub open_prs: i64,
     pub commits_30d: i64,
+    pub commits_365d: i64,
     pub contributors_30d: i64,
     pub last_commit_at: Option<DateTime<Utc>>,
     pub collected_at: DateTime<Utc>,
@@ -100,6 +101,7 @@ pub struct NewGithubSnapshot {
     pub open_issues: i64,
     pub open_prs: i64,
     pub commits_30d: i64,
+    pub commits_365d: i64,
     pub contributors_30d: i64,
     pub last_commit_at: Option<DateTime<Utc>>,
 }
