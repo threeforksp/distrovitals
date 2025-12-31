@@ -1,10 +1,16 @@
 // DistroVitals Frontend Application
 
 const API_BASE = '/api/v1';
+const PAGE_SIZE = 20;
+
+// SVG Icons
+const GITHUB_ICON = `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>`;
+const REDDIT_ICON = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/></svg>`;
 
 // State
 let rankings = [];
 let currentDistro = null;
+let currentPage = 1;
 
 // DOM Elements
 const rankingsSection = document.getElementById('rankings');
@@ -58,43 +64,73 @@ function renderRankings() {
         return;
     }
 
+    const totalPages = Math.ceil(rankings.length / PAGE_SIZE);
+    const startIdx = (currentPage - 1) * PAGE_SIZE;
+    const endIdx = startIdx + PAGE_SIZE;
+    const pageRankings = rankings.slice(startIdx, endIdx);
+
     const header = `
         <div class="ranking-row header">
             <span>Rank</span>
             <span>Distribution</span>
             <span>Score</span>
-            <span></span>
+            <span class="metrics-header">Contributors</span>
+            <span class="metrics-header">Commits/30d</span>
+            <span class="metrics-header">Releases/30d</span>
+            <span class="metrics-header">Stars</span>
             <span>Trend</span>
         </div>
     `;
 
-    const rows = rankings.map((d, idx) => {
-        const rank = d.rank || idx + 1;
+    const rows = pageRankings.map((d, idx) => {
+        const rank = d.rank || (startIdx + idx + 1);
         const rankClass = rank <= 3 ? `rank-${rank}` : '';
         const scoreClass = getScoreClass(d.overall_score);
         const trendIcon = getTrendIcon(d.trend);
         const trendClass = getTrendClass(d.trend);
+        const m = d.metrics || {};
+        const dataSources = renderDataSources(d);
 
         return `
             <div class="ranking-row" data-slug="${d.slug}">
                 <span class="rank ${rankClass}">#${rank}</span>
-                <span class="distro-name">${d.name}</span>
-                <span class="score">${d.overall_score.toFixed(1)}</span>
-                <span class="score-bar">
-                    <div class="score-fill ${scoreClass}" style="width: ${d.overall_score}%"></div>
+                <span class="distro-name-cell">
+                    <span class="distro-name">${d.name}</span>
+                    ${dataSources}
                 </span>
+                <span class="score">${d.overall_score.toFixed(1)}</span>
+                <span class="metric">${formatNumber(m.total_contributors || 0)}</span>
+                <span class="metric">${formatNumber(m.commits_30d || 0)}</span>
+                <span class="metric">${m.releases_30d || 0}</span>
+                <span class="metric">${formatNumber(m.total_stars || 0)}</span>
                 <span class="trend ${trendClass}">${trendIcon}</span>
             </div>
         `;
     }).join('');
 
-    rankingsTable.innerHTML = `<div class="rankings-list">${header}${rows}</div>`;
+    const pagination = totalPages > 1 ? `
+        <div class="pagination">
+            <button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>← Prev</button>
+            <span class="page-info">Page ${currentPage} of ${totalPages} (${rankings.length} distros)</span>
+            <button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>
+        </div>
+    ` : `<div class="pagination"><span class="page-info">${rankings.length} distributions</span></div>`;
+
+    rankingsTable.innerHTML = `<div class="rankings-list">${header}${rows}</div>${pagination}`;
     rankingsTable.classList.remove('loading');
 
     // Add click handlers
     document.querySelectorAll('.ranking-row:not(.header)').forEach(row => {
         row.addEventListener('click', () => showDistroDetail(row.dataset.slug));
     });
+}
+
+function goToPage(page) {
+    const totalPages = Math.ceil(rankings.length / PAGE_SIZE);
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    renderRankings();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // Show detail view for a distribution
@@ -130,6 +166,8 @@ function renderDistroDetail(distro, healthData, history) {
     const scoreClass = getScoreClass(distro.overall_score);
     const trendIcon = getTrendIcon(distro.trend);
     const trendClass = getTrendClass(distro.trend);
+    const m = distro.metrics || {};
+    const dataSources = renderDataSources(distro, true);
 
     distroInfo.innerHTML = `
         <div class="distro-header">
@@ -139,6 +177,50 @@ function renderDistroDetail(distro, healthData, history) {
             </div>
             <div class="overall-score ${scoreClass}">${distro.overall_score.toFixed(1)}</div>
         </div>
+
+        ${dataSources}
+
+        <div class="raw-metrics">
+            <div class="metric-card">
+                <span class="metric-value">${formatNumber(m.total_contributors || 0)}</span>
+                <span class="metric-label">Contributors</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-value">${formatNumber(m.commits_30d || 0)}</span>
+                <span class="metric-label">Commits (30d)</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-value">${m.releases_30d || 0}</span>
+                <span class="metric-label">Releases (30d)</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-value">${formatNumber(m.total_stars || 0)}</span>
+                <span class="metric-label">Stars</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-value">${formatNumber(m.total_forks || 0)}</span>
+                <span class="metric-label">Forks</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-value">${formatNumber(m.open_issues || 0)}</span>
+                <span class="metric-label">Open Issues</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-value">${formatNumber(m.open_prs || 0)}</span>
+                <span class="metric-label">Open PRs</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-value">${m.total_releases || 0}</span>
+                <span class="metric-label">Total Releases</span>
+            </div>
+        </div>
+
+        ${m.latest_release ? `
+        <div class="latest-release">
+            <span class="release-tag">${m.latest_release}</span>
+            <span class="release-age">${m.days_since_release !== null ? formatDaysAgo(m.days_since_release) : ''}</span>
+        </div>
+        ` : ''}
 
         <div class="score-breakdown">
             <div class="score-item">
@@ -200,6 +282,21 @@ function showRankings() {
 }
 
 // Utility functions
+function formatNumber(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+}
+
+function formatDaysAgo(days) {
+    if (days === 0) return 'today';
+    if (days === 1) return 'yesterday';
+    if (days < 7) return `${days} days ago`;
+    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+    if (days < 365) return `${Math.floor(days / 30)} months ago`;
+    return `${Math.floor(days / 365)} years ago`;
+}
+
 function getScoreClass(score) {
     if (score >= 70) return 'score-high';
     if (score >= 40) return 'score-medium';
@@ -220,4 +317,25 @@ function getTrendClass(trend) {
         case 'down': return 'trend-down';
         default: return 'trend-stable';
     }
+}
+
+// Render data source badges
+function renderDataSources(distro, detailed = false) {
+    const badges = [];
+
+    if (distro.github_org) {
+        const url = `https://github.com/${distro.github_org}`;
+        badges.push(`<a href="${url}" target="_blank" class="source-badge github" title="GitHub: ${distro.github_org}">${GITHUB_ICON}${detailed ? distro.github_org : ''}</a>`);
+    }
+
+    if (distro.subreddit) {
+        const url = `https://reddit.com/r/${distro.subreddit}`;
+        badges.push(`<a href="${url}" target="_blank" class="source-badge reddit" title="Reddit: r/${distro.subreddit}">${REDDIT_ICON}${detailed ? 'r/' + distro.subreddit : ''}</a>`);
+    }
+
+    if (badges.length === 0) {
+        return detailed ? '<span class="no-sources">No data sources configured</span>' : '';
+    }
+
+    return `<div class="${detailed ? 'detail-data-sources' : 'data-sources'}">${badges.join('')}</div>`;
 }

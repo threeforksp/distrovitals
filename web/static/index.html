@@ -28,15 +28,113 @@
             <div id="distro-info"></div>
         </section>
 
-        <section id="about" class="card">
-            <h2>About DistroVitals</h2>
-            <p>DistroVitals tracks the health and vitality of Linux distributions by analyzing:</p>
-            <ul>
-                <li><strong>Development Activity</strong> - Commits, contributors, and code velocity</li>
-                <li><strong>Community Engagement</strong> - Stars, forks, and community growth</li>
-                <li><strong>Maintenance Health</strong> - Issue resolution, PR handling, and release cadence</li>
-            </ul>
-            <p>Data is collected from GitHub repositories and other public sources. Scores range from 0-100.</p>
+        <section id="methodology" class="card">
+            <h2>Scoring Methodology</h2>
+            <p class="methodology-intro">DistroVitals calculates health scores by analyzing publicly available data from multiple sources.
+            Our goal is to provide an objective, data-driven view of distribution project health—not to rank "best" distros for end users.</p>
+
+            <div class="methodology-section">
+                <h3>Overall Score Formula</h3>
+                <div class="formula">
+                    <code>Overall Score = (Development × 40%) + (Community × 30%) + (Maintenance × 30%)</code>
+                </div>
+                <p>Each component is scored 0-100, then weighted to produce the final score.</p>
+            </div>
+
+            <div class="methodology-section">
+                <h3>Development Activity (40%)</h3>
+                <p>Measures how actively the project is being developed.</p>
+                <table class="scoring-table">
+                    <tr><th>Metric</th><th>Weight</th><th>Scoring Tiers</th></tr>
+                    <tr>
+                        <td>Commits (30 days)</td>
+                        <td>60%</td>
+                        <td>0-10: 20 | 11-50: 40 | 51-200: 60 | 201-500: 80 | 500+: 95</td>
+                    </tr>
+                    <tr>
+                        <td>Contributors (30 days)</td>
+                        <td>40%</td>
+                        <td>0-2: 20 | 3-10: 40 | 11-30: 60 | 31-100: 80 | 100+: 95</td>
+                    </tr>
+                </table>
+                <p class="data-source"><strong>Data Source:</strong> GitHub API - commits and contributor statistics from organization repositories</p>
+            </div>
+
+            <div class="methodology-section">
+                <h3>Community Engagement (30%)</h3>
+                <p>Measures user community size and engagement. Combines GitHub popularity with Reddit community presence.</p>
+                <div class="formula">
+                    <code>Community = (GitHub Score × 40%) + (Reddit Score × 60%)</code>
+                </div>
+                <table class="scoring-table">
+                    <tr><th>Metric</th><th>Source</th><th>Scoring Tiers</th></tr>
+                    <tr>
+                        <td>Stars</td>
+                        <td>GitHub</td>
+                        <td>0-100: 20 | 101-1K: 40 | 1K-5K: 60 | 5K-20K: 80 | 20K+: 95</td>
+                    </tr>
+                    <tr>
+                        <td>Forks</td>
+                        <td>GitHub</td>
+                        <td>0-10: 20 | 11-100: 40 | 101-500: 60 | 501-2K: 80 | 2K+: 95</td>
+                    </tr>
+                    <tr>
+                        <td>Subscribers</td>
+                        <td>Reddit</td>
+                        <td>0-1K: 20 | 1K-5K: 30 | 5K-15K: 45 | 15K-50K: 60 | 50K-100K: 75 | 100K-200K: 85 | 200K+: 95</td>
+                    </tr>
+                    <tr>
+                        <td>Posts (30 days)</td>
+                        <td>Reddit</td>
+                        <td>0-10: 20 | 11-30: 40 | 31-60: 60 | 61-100: 80 | 100+: 95</td>
+                    </tr>
+                </table>
+                <p class="data-source"><strong>Data Sources:</strong> GitHub API (stars, forks) + Reddit API (subreddit subscribers, recent posts)</p>
+            </div>
+
+            <div class="methodology-section">
+                <h3>Maintenance Health (30%)</h3>
+                <p>Measures how well the project handles issues, PRs, and releases.</p>
+                <table class="scoring-table">
+                    <tr><th>Metric</th><th>Weight</th><th>Scoring (lower is better for issues/PRs)</th></tr>
+                    <tr>
+                        <td>Open Issues</td>
+                        <td>30%</td>
+                        <td>0-10: 90 | 11-50: 80 | 51-200: 70 | 201-500: 50 | 500-1K: 30 | 1K+: 20</td>
+                    </tr>
+                    <tr>
+                        <td>Open PRs</td>
+                        <td>30%</td>
+                        <td>0-5: 90 | 6-20: 80 | 21-50: 70 | 51-100: 50 | 100+: 30</td>
+                    </tr>
+                    <tr>
+                        <td>Last Commit Recency</td>
+                        <td>40%</td>
+                        <td>0-7 days: 100 | 8-30 days: 80 | 31-90 days: 60 | 91-180 days: 40 | 180+ days: 20</td>
+                    </tr>
+                </table>
+                <p class="data-source"><strong>Data Source:</strong> GitHub API - issue counts, PR counts, and push timestamps</p>
+            </div>
+
+            <div class="methodology-section">
+                <h3>Important Caveats</h3>
+                <ul class="caveats-list">
+                    <li><strong>Not all distros use GitHub:</strong> Distributions like Debian develop primarily via mailing lists and GitLab. Their GitHub presence may not reflect actual development activity.</li>
+                    <li><strong>Organization scope varies:</strong> Some GitHub orgs contain all project repos; others split across multiple orgs or use different hosting entirely.</li>
+                    <li><strong>Community != Quality:</strong> A large Reddit community indicates popularity, not necessarily technical quality or suitability for your use case.</li>
+                    <li><strong>Scores reflect project health, not distro quality:</strong> A high score means active development and engaged community—it doesn't mean the distro is "better" for any particular use.</li>
+                </ul>
+            </div>
+
+            <div class="methodology-section">
+                <h3>Data Collection</h3>
+                <p>Data is collected via:</p>
+                <ul>
+                    <li><strong>GitHub REST API</strong> - Repository statistics, commits, issues, PRs, releases</li>
+                    <li><strong>Reddit JSON API</strong> - Subreddit subscriber counts and recent post activity</li>
+                </ul>
+                <p>Collection runs periodically. Scores are recalculated after each collection cycle.</p>
+            </div>
         </section>
     </main>
 

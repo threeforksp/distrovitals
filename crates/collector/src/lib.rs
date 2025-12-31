@@ -1,8 +1,9 @@
 //! DistroVitals Data Collectors
 //!
-//! Fetches metrics from various sources (GitHub, package repos, etc.)
+//! Fetches metrics from various sources (GitHub, Reddit, package repos, etc.)
 
 pub mod github;
+pub mod reddit;
 
 use thiserror::Error;
 

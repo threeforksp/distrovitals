@@ -7,7 +7,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use distrovitals_analyzer::{Analyzer, DistroHealthSummary};
+use distrovitals_analyzer::{Analyzer, DistroHealthSummary, RawMetrics};
 use distrovitals_collector::{github::GithubCollector, CollectorConfig};
 use serde::{Deserialize, Serialize};
 use tracing::error;
@@ -171,24 +171,32 @@ pub async fn get_rankings(State(state): State<SharedState>) -> impl IntoResponse
         Err(e) => return ApiResponse::<()>::err(e.to_string()).into_response(),
     };
 
-    let mut rankings: Vec<DistroHealthSummary> = scores
-        .into_iter()
-        .enumerate()
-        .filter_map(|(idx, score)| {
-            distros.iter().find(|d| d.id == score.distro_id).map(|d| {
-                DistroHealthSummary {
-                    slug: d.slug.clone(),
-                    name: d.name.clone(),
-                    overall_score: score.overall_score,
-                    development_score: score.development_score,
-                    community_score: score.community_score,
-                    maintenance_score: score.maintenance_score,
-                    trend: score.trend,
-                    rank: idx + 1,
-                }
-            })
-        })
-        .collect();
+    let mut rankings: Vec<DistroHealthSummary> = Vec::new();
+
+    for (idx, score) in scores.into_iter().enumerate() {
+        if let Some(d) = distros.iter().find(|d| d.id == score.distro_id) {
+            let snapshots = state.db.get_latest_github_snapshots(d.id).await.unwrap_or_default();
+            let releases = state.db.get_latest_release_snapshots(d.id).await.unwrap_or_default();
+            let community = state.db.get_latest_community_snapshots(d.id).await.unwrap_or_default();
+            let metrics = RawMetrics::from_github_snapshots(&snapshots)
+                .with_releases(&releases)
+                .with_community(&community);
+
+            rankings.push(DistroHealthSummary {
+                slug: d.slug.clone(),
+                name: d.name.clone(),
+                overall_score: score.overall_score,
+                development_score: score.development_score,
+                community_score: score.community_score,
+                maintenance_score: score.maintenance_score,
+                trend: score.trend,
+                rank: idx + 1,
+                metrics,
+                github_org: d.github_org.clone(),
+                subreddit: d.subreddit.clone(),
+            });
+        }
+    }
 
     // Add distros without scores
     for distro in &distros {
@@ -202,6 +210,9 @@ pub async fn get_rankings(State(state): State<SharedState>) -> impl IntoResponse
                 maintenance_score: 0.0,
                 trend: "unknown".to_string(),
                 rank: rankings.len() + 1,
+                metrics: RawMetrics::default(),
+                github_org: distro.github_org.clone(),
+                subreddit: distro.subreddit.clone(),
             });
         }
     }
@@ -240,6 +251,12 @@ pub async fn trigger_collection(
         if let Err(e) = collector.collect_org_repos(&state.db, distro.id, org).await {
             error!("GitHub collection failed for {}: {}", slug, e);
             return ApiResponse::<()>::err(e.to_string()).into_response();
+        }
+
+        // Collect releases
+        if let Err(e) = collector.collect_org_releases(&state.db, distro.id, org).await {
+            error!("GitHub release collection failed for {}: {}", slug, e);
+            // Don't fail the whole request for release errors
         }
     }
 

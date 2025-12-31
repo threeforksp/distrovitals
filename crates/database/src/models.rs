@@ -12,6 +12,7 @@ pub struct Distribution {
     pub homepage: Option<String>,
     pub github_org: Option<String>,
     pub gitlab_group: Option<String>,
+    pub subreddit: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -76,6 +77,17 @@ pub struct NewDistribution {
     pub homepage: Option<String>,
     pub github_org: Option<String>,
     pub gitlab_group: Option<String>,
+    pub subreddit: Option<String>,
+}
+
+/// Input for creating a community snapshot
+#[derive(Debug, Clone)]
+pub struct NewCommunitySnapshot {
+    pub distro_id: i64,
+    pub source: String,
+    pub active_users_30d: Option<i64>,
+    pub posts_30d: Option<i64>,
+    pub response_time_avg_hours: Option<f64>,
 }
 
 /// Input for creating a GitHub snapshot
@@ -101,4 +113,28 @@ pub struct NewHealthScore {
     pub community_score: f64,
     pub maintenance_score: f64,
     pub trend: String,
+}
+
+/// Release snapshot from GitHub
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ReleaseSnapshot {
+    pub id: i64,
+    pub distro_id: i64,
+    pub repo_name: String,
+    pub tag_name: String,
+    pub release_name: Option<String>,
+    pub published_at: Option<DateTime<Utc>>,
+    pub is_prerelease: bool,
+    pub collected_at: DateTime<Utc>,
+}
+
+/// Input for creating a release snapshot
+#[derive(Debug, Clone)]
+pub struct NewReleaseSnapshot {
+    pub distro_id: i64,
+    pub repo_name: String,
+    pub tag_name: String,
+    pub release_name: Option<String>,
+    pub published_at: Option<DateTime<Utc>>,
+    pub is_prerelease: bool,
 }

@@ -2,7 +2,7 @@
 
 use crate::{CollectorConfig, CollectorError, Result};
 use chrono::{DateTime, Utc};
-use distrovitals_database::{Database, NewGithubSnapshot};
+use distrovitals_database::{Database, NewGithubSnapshot, NewReleaseSnapshot};
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, USER_AGENT};
 use reqwest::Client;
 use serde::Deserialize;
@@ -28,6 +28,14 @@ struct RepoResponse {
 struct CommitResponse {
     #[allow(dead_code)]
     sha: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ReleaseResponse {
+    tag_name: String,
+    name: Option<String>,
+    published_at: Option<DateTime<Utc>>,
+    prerelease: bool,
 }
 
 impl GithubCollector {
@@ -70,6 +78,76 @@ impl GithubCollector {
 
         info!(org = org, count = snapshot_ids.len(), "Collected GitHub snapshots");
         Ok(snapshot_ids)
+    }
+
+    /// Collect releases for a GitHub organization's repositories
+    pub async fn collect_org_releases(
+        &self,
+        db: &Database,
+        distro_id: i64,
+        org: &str,
+    ) -> Result<Vec<i64>> {
+        info!(org = org, "Collecting GitHub releases");
+
+        let repos = self.get_org_repos(org).await?;
+        let mut release_ids = Vec::new();
+
+        for repo in repos {
+            match self.collect_repo_releases(db, distro_id, org, &repo.name).await {
+                Ok(ids) => release_ids.extend(ids),
+                Err(e) => warn!(repo = repo.name, error = %e, "Failed to collect releases"),
+            }
+        }
+
+        info!(org = org, count = release_ids.len(), "Collected releases");
+        Ok(release_ids)
+    }
+
+    /// Collect releases for a single repository
+    pub async fn collect_repo_releases(
+        &self,
+        db: &Database,
+        distro_id: i64,
+        owner: &str,
+        repo: &str,
+    ) -> Result<Vec<i64>> {
+        let releases = self.get_releases(owner, repo).await?;
+        let mut ids = Vec::new();
+
+        let repo_name = format!("{}/{}", owner, repo);
+        for release in releases {
+            let snapshot = NewReleaseSnapshot {
+                distro_id,
+                repo_name: repo_name.clone(),
+                tag_name: release.tag_name,
+                release_name: release.name,
+                published_at: release.published_at,
+                is_prerelease: release.prerelease,
+            };
+
+            let id = db.insert_release_snapshot(snapshot).await?;
+            ids.push(id);
+        }
+
+        debug!(owner = owner, repo = repo, count = ids.len(), "Collected releases");
+        Ok(ids)
+    }
+
+    async fn get_releases(&self, owner: &str, repo: &str) -> Result<Vec<ReleaseResponse>> {
+        let url = format!(
+            "https://api.github.com/repos/{}/{}/releases?per_page=30",
+            owner, repo
+        );
+
+        let response = self.client.get(&url).send().await?;
+        self.check_rate_limit(&response)?;
+
+        if !response.status().is_success() {
+            return Ok(Vec::new());
+        }
+
+        let releases: Vec<ReleaseResponse> = response.json().await.unwrap_or_default();
+        Ok(releases)
     }
 
     /// Collect metrics for a single repository

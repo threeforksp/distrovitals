@@ -6,7 +6,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use distrovitals_analyzer::Analyzer;
 use distrovitals_api::{create_router, AppState};
-use distrovitals_collector::{github::GithubCollector, CollectorConfig};
+use distrovitals_collector::{github::GithubCollector, reddit::RedditCollector, CollectorConfig};
 use distrovitals_database::Database;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -44,8 +44,15 @@ enum Commands {
         static_dir: Option<PathBuf>,
     },
 
-    /// Collect data for distributions
+    /// Collect GitHub data for distributions
     Collect {
+        /// Distribution slug (or "all" for all distributions)
+        #[arg(default_value = "all")]
+        distro: String,
+    },
+
+    /// Collect Reddit community data for distributions
+    CollectReddit {
         /// Distribution slug (or "all" for all distributions)
         #[arg(default_value = "all")]
         distro: String,
@@ -93,6 +100,9 @@ async fn main() -> Result<()> {
         Commands::Collect { distro } => {
             collect(&db, &distro).await?;
         }
+        Commands::CollectReddit { distro } => {
+            collect_reddit(&db, &distro).await?;
+        }
         Commands::Analyze { distro } => {
             analyze(&db, &distro).await?;
         }
@@ -126,6 +136,34 @@ async fn serve(db: Database, bind: SocketAddr, static_dir: Option<PathBuf>) -> R
     Ok(())
 }
 
+async fn collect_reddit(db: &Database, distro_slug: &str) -> Result<()> {
+    let config = CollectorConfig::default();
+    let collector = RedditCollector::new(config)?;
+
+    if distro_slug == "all" {
+        println!("Collecting Reddit data for all distributions...");
+        match collector.collect_all(db).await {
+            Ok(ids) => println!("Reddit: {} snapshots collected", ids.len()),
+            Err(e) => eprintln!("Reddit: Error - {}", e),
+        }
+    } else {
+        let distro = db.get_distribution_by_slug(distro_slug).await?;
+        println!("Collecting Reddit data for {}...", distro.name);
+
+        if let Some(ref subreddit) = distro.subreddit {
+            match collector.collect_subreddit(db, distro.id, subreddit).await {
+                Ok(_) => println!("  Reddit: r/{} collected", subreddit),
+                Err(e) => eprintln!("  Reddit: Error - {}", e),
+            }
+        } else {
+            println!("  Reddit: No subreddit configured, skipping");
+        }
+    }
+
+    println!("\nReddit collection complete!");
+    Ok(())
+}
+
 async fn collect(db: &Database, distro_slug: &str) -> Result<()> {
     let config = CollectorConfig::default();
 
@@ -148,6 +186,11 @@ async fn collect(db: &Database, distro_slug: &str) -> Result<()> {
             match collector.collect_org_repos(db, distro.id, org).await {
                 Ok(ids) => println!("  GitHub: {} snapshots collected", ids.len()),
                 Err(e) => eprintln!("  GitHub: Error - {}", e),
+            }
+
+            match collector.collect_org_releases(db, distro.id, org).await {
+                Ok(ids) => println!("  Releases: {} collected", ids.len()),
+                Err(e) => eprintln!("  Releases: Error - {}", e),
             }
         } else {
             println!("  GitHub: No org configured, skipping");

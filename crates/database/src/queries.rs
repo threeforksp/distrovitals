@@ -10,7 +10,7 @@ impl Database {
     /// Get all distributions
     pub async fn get_distributions(&self) -> Result<Vec<Distribution>> {
         let rows = sqlx::query_as::<_, Distribution>(
-            "SELECT id, name, slug, homepage, github_org, gitlab_group,
+            "SELECT id, name, slug, homepage, github_org, gitlab_group, subreddit,
                     datetime(created_at) as created_at, datetime(updated_at) as updated_at
              FROM distributions ORDER BY name",
         )
@@ -23,7 +23,7 @@ impl Database {
     /// Get a distribution by slug
     pub async fn get_distribution_by_slug(&self, slug: &str) -> Result<Distribution> {
         sqlx::query_as::<_, Distribution>(
-            "SELECT id, name, slug, homepage, github_org, gitlab_group,
+            "SELECT id, name, slug, homepage, github_org, gitlab_group, subreddit,
                     datetime(created_at) as created_at, datetime(updated_at) as updated_at
              FROM distributions WHERE slug = ?",
         )
@@ -36,14 +36,15 @@ impl Database {
     /// Create a new distribution
     pub async fn create_distribution(&self, distro: NewDistribution) -> Result<Distribution> {
         let id = sqlx::query(
-            "INSERT INTO distributions (name, slug, homepage, github_org, gitlab_group)
-             VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO distributions (name, slug, homepage, github_org, gitlab_group, subreddit)
+             VALUES (?, ?, ?, ?, ?, ?)",
         )
         .bind(&distro.name)
         .bind(&distro.slug)
         .bind(&distro.homepage)
         .bind(&distro.github_org)
         .bind(&distro.gitlab_group)
+        .bind(&distro.subreddit)
         .execute(self.pool())
         .await?
         .last_insert_rowid();
@@ -54,7 +55,7 @@ impl Database {
     /// Get a distribution by ID
     pub async fn get_distribution_by_id(&self, id: i64) -> Result<Distribution> {
         sqlx::query_as::<_, Distribution>(
-            "SELECT id, name, slug, homepage, github_org, gitlab_group,
+            "SELECT id, name, slug, homepage, github_org, gitlab_group, subreddit,
                     datetime(created_at) as created_at, datetime(updated_at) as updated_at
              FROM distributions WHERE id = ?",
         )
@@ -62,6 +63,16 @@ impl Database {
         .fetch_optional(self.pool())
         .await?
         .ok_or_else(|| DatabaseError::NotFound(format!("Distribution ID: {}", id)))
+    }
+
+    /// Update a distribution's subreddit
+    pub async fn update_distribution_subreddit(&self, id: i64, subreddit: &str) -> Result<()> {
+        sqlx::query("UPDATE distributions SET subreddit = ?, updated_at = datetime('now') WHERE id = ?")
+            .bind(subreddit)
+            .bind(id)
+            .execute(self.pool())
+            .await?;
+        Ok(())
     }
 
     // ==================== GitHub Snapshots ====================
@@ -184,6 +195,107 @@ impl Database {
         )
         .bind(distro_id)
         .bind(format!("-{} days", days))
+        .fetch_all(self.pool())
+        .await?;
+
+        Ok(rows)
+    }
+
+    // ==================== Release Snapshots ====================
+
+    /// Insert a new release snapshot
+    pub async fn insert_release_snapshot(&self, snapshot: NewReleaseSnapshot) -> Result<i64> {
+        let id = sqlx::query(
+            "INSERT INTO release_snapshots
+             (distro_id, repo_name, tag_name, release_name, published_at, is_prerelease)
+             VALUES (?, ?, ?, ?, ?, ?)",
+        )
+        .bind(snapshot.distro_id)
+        .bind(&snapshot.repo_name)
+        .bind(&snapshot.tag_name)
+        .bind(&snapshot.release_name)
+        .bind(snapshot.published_at)
+        .bind(snapshot.is_prerelease)
+        .execute(self.pool())
+        .await?
+        .last_insert_rowid();
+
+        Ok(id)
+    }
+
+    /// Get latest release snapshots for a distribution
+    pub async fn get_latest_release_snapshots(&self, distro_id: i64) -> Result<Vec<ReleaseSnapshot>> {
+        let rows = sqlx::query_as::<_, ReleaseSnapshot>(
+            "SELECT id, distro_id, repo_name, tag_name, release_name,
+                    datetime(published_at) as published_at, is_prerelease,
+                    datetime(collected_at) as collected_at
+             FROM release_snapshots
+             WHERE distro_id = ?
+             AND collected_at = (SELECT MAX(collected_at) FROM release_snapshots WHERE distro_id = ?)
+             ORDER BY published_at DESC",
+        )
+        .bind(distro_id)
+        .bind(distro_id)
+        .fetch_all(self.pool())
+        .await?;
+
+        Ok(rows)
+    }
+
+    /// Get releases from the last N days for a distribution
+    pub async fn get_recent_releases(&self, distro_id: i64, days: i32) -> Result<Vec<ReleaseSnapshot>> {
+        let rows = sqlx::query_as::<_, ReleaseSnapshot>(
+            "SELECT id, distro_id, repo_name, tag_name, release_name,
+                    datetime(published_at) as published_at, is_prerelease,
+                    datetime(collected_at) as collected_at
+             FROM release_snapshots
+             WHERE distro_id = ?
+             AND collected_at = (SELECT MAX(collected_at) FROM release_snapshots WHERE distro_id = ?)
+             AND published_at >= datetime('now', ?)
+             ORDER BY published_at DESC",
+        )
+        .bind(distro_id)
+        .bind(distro_id)
+        .bind(format!("-{} days", days))
+        .fetch_all(self.pool())
+        .await?;
+
+        Ok(rows)
+    }
+
+    // ==================== Community Snapshots ====================
+
+    /// Insert a new community snapshot
+    pub async fn insert_community_snapshot(&self, snapshot: NewCommunitySnapshot) -> Result<i64> {
+        let id = sqlx::query(
+            "INSERT INTO community_snapshots
+             (distro_id, source, active_users_30d, posts_30d, response_time_avg_hours)
+             VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind(snapshot.distro_id)
+        .bind(&snapshot.source)
+        .bind(snapshot.active_users_30d)
+        .bind(snapshot.posts_30d)
+        .bind(snapshot.response_time_avg_hours)
+        .execute(self.pool())
+        .await?
+        .last_insert_rowid();
+
+        Ok(id)
+    }
+
+    /// Get latest community snapshots for a distribution
+    pub async fn get_latest_community_snapshots(&self, distro_id: i64) -> Result<Vec<CommunitySnapshot>> {
+        let rows = sqlx::query_as::<_, CommunitySnapshot>(
+            "SELECT id, distro_id, source, active_users_30d, posts_30d,
+                    response_time_avg_hours, datetime(collected_at) as collected_at
+             FROM community_snapshots
+             WHERE distro_id = ?
+             AND collected_at = (SELECT MAX(collected_at) FROM community_snapshots WHERE distro_id = ?)
+             ORDER BY source",
+        )
+        .bind(distro_id)
+        .bind(distro_id)
         .fetch_all(self.pool())
         .await?;
 
