@@ -247,6 +247,8 @@ function renderDistroDetail(distro, healthData, history) {
         </div>
 
         ${history.length > 0 ? renderHistory(history) : '<p>No historical data available yet.</p>'}
+
+        ${renderDetailMethodology(distro)}
     `;
 }
 
@@ -271,6 +273,39 @@ function renderHistory(history) {
                     vector-effect="non-scaling-stroke"
                 />
             </svg>
+        </div>
+    `;
+}
+
+function renderDetailMethodology(distro) {
+    return `
+        <div class="detail-methodology">
+            <h3 class="collapsible-header" onclick="window.toggleMethodology('detail-methodology-content'); event.stopPropagation();">
+                <span class="toggle-icon">▶</span> How This Score Is Calculated
+            </h3>
+            <div id="detail-methodology-content" class="collapsible-content collapsed">
+                <div class="score-explanation">
+                    <p><strong>Overall Score</strong> = Development (40%) + Community (30%) + Maintenance (30%)</p>
+
+                    <div class="score-detail">
+                        <h4>Development Activity (${distro.development_score.toFixed(1)})</h4>
+                        <p>Based on commits and contributors in the last 30 days from GitHub repositories.</p>
+                    </div>
+
+                    <div class="score-detail">
+                        <h4>Community Engagement (${distro.community_score.toFixed(1)})</h4>
+                        <p>Combines GitHub popularity (stars, forks) with Reddit community size and activity.
+                        ${distro.subreddit ? `Reddit data from r/${distro.subreddit}.` : 'No Reddit data available.'}</p>
+                    </div>
+
+                    <div class="score-detail">
+                        <h4>Maintenance Health (${distro.maintenance_score.toFixed(1)})</h4>
+                        <p>Measures open issues, open PRs, and recency of last commit. Lower backlogs = higher scores.</p>
+                    </div>
+
+                    <p class="methodology-note"><em>Note: Not all distros develop on GitHub. Scores reflect GitHub/Reddit presence, not overall project quality.</em></p>
+                </div>
+            </div>
         </div>
     `;
 }
@@ -319,18 +354,40 @@ function getTrendClass(trend) {
     }
 }
 
+// Toggle methodology section (exposed globally for onclick)
+window.toggleMethodology = function(elementId) {
+    const id = elementId || 'methodology-content';
+    const content = document.getElementById(id);
+    if (!content) return;
+
+    const header = content.previousElementSibling;
+
+    if (content.classList.contains('collapsed')) {
+        content.classList.remove('collapsed');
+        if (header) header.classList.add('expanded');
+    } else {
+        content.classList.add('collapsed');
+        if (header) header.classList.remove('expanded');
+    }
+};
+
 // Render data source badges
 function renderDataSources(distro, detailed = false) {
     const badges = [];
+    const m = distro.metrics || {};
 
     if (distro.github_org) {
         const url = `https://github.com/${distro.github_org}`;
-        badges.push(`<a href="${url}" target="_blank" class="source-badge github" title="GitHub: ${distro.github_org}">${GITHUB_ICON}${detailed ? distro.github_org : ''}</a>`);
+        const label = detailed ? distro.github_org : 'GitHub';
+        badges.push(`<a href="${url}" target="_blank" class="source-badge github" onclick="event.stopPropagation()" title="GitHub: ${distro.github_org}">${GITHUB_ICON}<span>${label}</span></a>`);
     }
 
     if (distro.subreddit) {
         const url = `https://reddit.com/r/${distro.subreddit}`;
-        badges.push(`<a href="${url}" target="_blank" class="source-badge reddit" title="Reddit: r/${distro.subreddit}">${REDDIT_ICON}${detailed ? 'r/' + distro.subreddit : ''}</a>`);
+        const subs = m.reddit_subscribers || 0;
+        const subsFormatted = formatNumber(subs);
+        const label = detailed ? `r/${distro.subreddit} (${subsFormatted})` : `${subsFormatted}`;
+        badges.push(`<a href="${url}" target="_blank" class="source-badge reddit" onclick="event.stopPropagation()" title="Reddit: r/${distro.subreddit} - ${subs.toLocaleString()} subscribers">${REDDIT_ICON}<span>${label}</span></a>`);
     }
 
     if (badges.length === 0) {

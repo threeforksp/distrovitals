@@ -146,8 +146,9 @@ main {
 
 .distro-name-cell {
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .distro-name {
@@ -365,6 +366,44 @@ footer {
 }
 
 /* Methodology Section */
+.collapsible-header {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    user-select: none;
+    margin-bottom: 0;
+    transition: color 0.2s;
+}
+
+.collapsible-header:hover {
+    color: var(--accent);
+}
+
+.toggle-icon {
+    font-size: 0.75rem;
+    transition: transform 0.2s;
+    display: inline-block;
+}
+
+.collapsible-header.expanded .toggle-icon {
+    transform: rotate(90deg);
+}
+
+.collapsible-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+    max-height: 2000px;
+    opacity: 1;
+    margin-top: 1rem;
+}
+
+.collapsible-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0;
+}
+
 #methodology h2 {
     margin-bottom: 1rem;
 }
@@ -499,7 +538,7 @@ footer {
     display: flex;
     gap: 0.5rem;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .source-badge {
@@ -514,6 +553,8 @@ footer {
     color: var(--text-secondary);
     text-decoration: none;
     transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .source-badge:hover {
@@ -563,6 +604,56 @@ footer {
 .detail-data-sources .source-badge svg {
     width: 16px;
     height: 16px;
+}
+
+/* Detail Methodology Section */
+.detail-methodology {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+}
+
+.detail-methodology h3 {
+    font-size: 1rem;
+    margin: 0;
+}
+
+.score-explanation {
+    padding-top: 0.5rem;
+}
+
+.score-explanation > p:first-child {
+    background: var(--bg-card);
+    padding: 0.75rem;
+    border-radius: var(--radius);
+    margin-bottom: 1rem;
+}
+
+.score-detail {
+    margin-bottom: 1rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--border);
+}
+
+.score-detail h4 {
+    color: var(--accent);
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.score-detail p {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.methodology-note {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
 }
 
 /* Responsive */

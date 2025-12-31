@@ -29,7 +29,10 @@
         </section>
 
         <section id="methodology" class="card">
-            <h2>Scoring Methodology</h2>
+            <h2 class="collapsible-header" onclick="window.toggleMethodology(); event.stopPropagation();">
+                <span class="toggle-icon">▶</span> Scoring Methodology
+            </h2>
+            <div id="methodology-content" class="collapsible-content collapsed">
             <p class="methodology-intro">DistroVitals calculates health scores by analyzing publicly available data from multiple sources.
             Our goal is to provide an objective, data-driven view of distribution project health—not to rank "best" distros for end users.</p>
 
@@ -134,6 +137,7 @@
                     <li><strong>Reddit JSON API</strong> - Subreddit subscriber counts and recent post activity</li>
                 </ul>
                 <p>Collection runs periodically. Scores are recalculated after each collection cycle.</p>
+            </div>
             </div>
         </section>
     </main>
