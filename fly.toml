@@ -1,3 +1,4 @@
+app = 'dv'
 [workspace]
 resolver = "2"
 members = [
