@@ -36,6 +36,7 @@ COPY --from=builder /app/target/release/dv /app/dv
 
 # Copy web assets if they exist
 COPY web ./web
+COPY distrovitals.db ./distrovitals.db
 
 # Expose port
 EXPOSE 8080
