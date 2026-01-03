@@ -1,56 +1,21 @@
 app = 'dv'
-[workspace]
-resolver = "2"
-members = [
-    "crates/collector",
-    "crates/database",
-    "crates/analyzer",
-    "crates/api",
-    "crates/cli",
-]
+primary_region = 'ewr'
 
-[workspace.package]
-version = "0.1.0"
-edition = "2021"
-authors = ["DistroVitals Contributors"]
-license = "MIT"
-repository = "https://github.com/distrovitals/distrovitals"
+[build]
+  dockerfile = "Dockerfile"
 
-[workspace.dependencies]
-# Async runtime
-tokio = { version = "1.43", features = ["full"] }
+[env]
+  PORT = '8080'
 
-# Web framework
-axum = { version = "0.8", features = ["macros"] }
-tower = "0.5"
-tower-http = { version = "0.6", features = ["cors", "fs", "compression-gzip"] }
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
 
-# Database
-sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "chrono"] }
-
-# HTTP client
-reqwest = { version = "0.12", features = ["json"] }
-
-# Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-# Date/time
-chrono = { version = "0.4", features = ["serde", "clock"] }
-
-# Error handling
-thiserror = "2.0"
-anyhow = "1.0"
-
-# Logging
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-
-# CLI
-clap = { version = "4.5", features = ["derive"] }
-
-# Internal crates
-distrovitals-collector = { path = "crates/collector" }
-distrovitals-database = { path = "crates/database" }
-distrovitals-analyzer = { path = "crates/analyzer" }
-distrovitals-api = { path = "crates/api" }
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
