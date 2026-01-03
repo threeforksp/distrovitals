@@ -75,7 +75,6 @@ function renderRankings() {
             <span>Distribution</span>
             <span>Score</span>
             <span class="metrics-header">Contributors</span>
-            <span class="metrics-header">Commits/30d</span>
             <span class="metrics-header">Releases/30d</span>
             <span class="metrics-header">Stars</span>
             <span>Trend</span>
@@ -100,7 +99,6 @@ function renderRankings() {
                 </span>
                 <span class="score">${d.overall_score.toFixed(1)}</span>
                 <span class="metric">${formatNumber(m.total_contributors || 0)}</span>
-                <span class="metric">${formatNumber(m.commits_30d || 0)}</span>
                 <span class="metric">${m.releases_30d || 0}</span>
                 <span class="metric">${formatNumber(m.total_stars || 0)}</span>
                 <span class="trend ${trendClass}">${trendIcon}</span>
