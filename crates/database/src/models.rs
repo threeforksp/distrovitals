@@ -13,6 +13,7 @@ pub struct Distribution {
     pub github_org: Option<String>,
     pub gitlab_group: Option<String>,
     pub subreddit: Option<String>,
+    pub description: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -79,6 +80,7 @@ pub struct NewDistribution {
     pub github_org: Option<String>,
     pub gitlab_group: Option<String>,
     pub subreddit: Option<String>,
+    pub description: Option<String>,
 }
 
 /// Input for creating a community snapshot

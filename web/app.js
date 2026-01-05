@@ -94,7 +94,7 @@ function renderRankings() {
             <div class="ranking-row" data-slug="${d.slug}">
                 <span class="rank ${rankClass}">#${rank}</span>
                 <span class="distro-name-cell">
-                    <span class="distro-name">${d.name}</span>
+                    <span class="distro-name" title="${d.description || 'No description available'}">${d.name}</span>
                     ${dataSources}
                 </span>
                 <span class="score">${d.overall_score.toFixed(1)}</span>

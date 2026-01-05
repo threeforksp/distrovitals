@@ -145,6 +145,57 @@ impl Database {
             info!("Added commits_365d column to github_snapshots");
         }
 
+        // Add description column if it does not exist
+        let has_description: bool = sqlx::query_scalar(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('distributions') WHERE name = 'description'"
+        )
+        .fetch_one(&self.pool)
+        .await
+        .unwrap_or(false);
+
+        if !has_description {
+            sqlx::query("ALTER TABLE distributions ADD COLUMN description TEXT")
+                .execute(&self.pool)
+                .await
+                .map_err(|e| DatabaseError::Migration(format!("Failed to add description column: {}", e)))?;
+
+            let descriptions = [
+                ("arch", "A simple, lightweight Linux distribution targeting competent Linux users."),
+                ("debian", "The universal operating system - a stable, secure, and versatile distribution committed to free software."),
+                ("fedora", "An innovative platform for hardware, clouds, and containers - built on freedom, friends, features, and first."),
+                ("nixos", "A purely functional Linux distribution built on Nix package manager - reproducible, declarative configuration."),
+                ("ubuntu", "The leading OS for PCs, tablets, servers, and the cloud - user-friendly and accessible to all."),
+                ("popos", "An Ubuntu-based distribution crafted for creators, makers, and computer builders by System76."),
+                ("manjaro", "A user-friendly Arch-based distribution for beginners and experienced users alike."),
+                ("endeavouros", "An Arch-based distro providing a terminal-centric experience with a friendly installer and helpful community."),
+                ("mint", "An elegant, easy-to-use desktop OS based on Ubuntu - designed for newcomers to Linux."),
+                ("gentoo", "A highly flexible source-based distribution for power users who want complete control and optimization."),
+                ("void", "An independent Linux distribution emphasizing simplicity and avoiding unnecessary complexity."),
+                ("opensuse", "A stable, multi-purpose distribution sponsored by SUSE, available in Leap and Tumbleweed variants."),
+                ("elementary", "A beautiful, privacy-respecting, and user-friendly replacement for Windows and macOS."),
+                ("garuda", "An Arch-based gaming distribution with performance tweaks and gaming tools out of the box."),
+                ("kali", "A Debian-based distribution designed for digital forensics, penetration testing, and security research."),
+                ("alpine", "A security-oriented, lightweight distribution suitable for containers and secure systems."),
+                ("rocky", "A community enterprise OS compatible with RHEL, designed for production environments."),
+                ("almalinux", "An open-source, community-driven RHEL fork designed for long-term stability and enterprise use."),
+                ("qubes", "A security-focused desktop OS using virtualization-based isolation to enhance privacy and security."),
+                ("cachyos", "An Arch-based distribution with performance optimizations, custom kernels, and GUI tools."),
+                ("bazzite", "An immutable Fedora-based gaming OS built on OCI containers for Steam Deck and desktop."),
+                ("solus", "An independent rolling-release distribution focused on desktop users with curated software."),
+            ];
+
+            for (slug, description) in descriptions {
+                sqlx::query("UPDATE distributions SET description = ? WHERE slug = ?")
+                    .bind(description)
+                    .bind(slug)
+                    .execute(&self.pool)
+                    .await
+                    .ok();
+            }
+
+            info!("Added description column and populated data");
+        }
+
         Ok(())
     }
 }
