@@ -10,7 +10,7 @@ impl Database {
     /// Get all distributions
     pub async fn get_distributions(&self) -> Result<Vec<Distribution>> {
         let rows = sqlx::query_as::<_, Distribution>(
-            "SELECT id, name, slug, homepage, github_org, gitlab_group, subreddit,
+            "SELECT id, name, slug, homepage, github_org, gitlab_group, subreddit, description,
                     datetime(created_at) as created_at, datetime(updated_at) as updated_at
              FROM distributions ORDER BY name",
         )
@@ -23,7 +23,7 @@ impl Database {
     /// Get a distribution by slug
     pub async fn get_distribution_by_slug(&self, slug: &str) -> Result<Distribution> {
         sqlx::query_as::<_, Distribution>(
-            "SELECT id, name, slug, homepage, github_org, gitlab_group, subreddit,
+            "SELECT id, name, slug, homepage, github_org, gitlab_group, subreddit, description,
                     datetime(created_at) as created_at, datetime(updated_at) as updated_at
              FROM distributions WHERE slug = ?",
         )
@@ -55,7 +55,7 @@ impl Database {
     /// Get a distribution by ID
     pub async fn get_distribution_by_id(&self, id: i64) -> Result<Distribution> {
         sqlx::query_as::<_, Distribution>(
-            "SELECT id, name, slug, homepage, github_org, gitlab_group, subreddit,
+            "SELECT id, name, slug, homepage, github_org, gitlab_group, subreddit, description,
                     datetime(created_at) as created_at, datetime(updated_at) as updated_at
              FROM distributions WHERE id = ?",
         )
