@@ -343,4 +343,5 @@ pub struct DistroHealthSummary {
     pub metrics: RawMetrics,
     pub github_org: Option<String>,
     pub subreddit: Option<String>,
+    pub description: Option<String>,
 }

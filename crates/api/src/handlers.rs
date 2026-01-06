@@ -194,6 +194,7 @@ pub async fn get_rankings(State(state): State<SharedState>) -> impl IntoResponse
                 metrics,
                 github_org: d.github_org.clone(),
                 subreddit: d.subreddit.clone(),
+                description: d.description.clone(),
             });
         }
     }
@@ -213,6 +214,7 @@ pub async fn get_rankings(State(state): State<SharedState>) -> impl IntoResponse
                 metrics: RawMetrics::default(),
                 github_org: distro.github_org.clone(),
                 subreddit: distro.subreddit.clone(),
+                description: distro.description.clone(),
             });
         }
     }
